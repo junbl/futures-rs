@@ -62,6 +62,9 @@ delegate_all!(
 mod fold;
 pub use self::fold::Fold;
 
+mod reduce;
+pub use self::reduce::Reduce;
+
 mod any;
 pub use self::any::Any;
 
@@ -670,6 +673,26 @@ pub trait StreamExt: Stream {
         Self: Sized,
     {
         assert_future::<T, _>(Fold::new(self, f, init))
+    }
+
+    /// # Examples
+    ///
+    /// ```
+    /// # futures::executor::block_on(async {
+    /// use futures::stream::{self, StreamExt};
+    ///
+    /// let number_stream = stream::iter(0..6);
+    /// let sum = number_stream.reduce(|acc, x| async move { acc + x });
+    /// assert_eq!(sum.await, 15);
+    /// # });
+    /// ```
+    fn reduce<Fut, F>(self,  f: F) -> Reduce<Self, Fut, F>
+    where
+        F: FnMut(Self::Item, Self::Item) -> Fut,
+        Fut: Future<Output = Self::Item>,
+        Self: Sized,
+    {
+        assert_future::<Self::Item, _>(Reduce::new(self, f))
     }
 
     /// Execute predicate over asynchronous stream, and return `true` if any element in stream satisfied a predicate.
